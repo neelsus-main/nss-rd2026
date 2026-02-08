@@ -1,11 +1,11 @@
 import { handlers } from "@/auth";
-import { NextResponse } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
 // Wrap handlers with error handling
-export async function GET(request: Request) {
+export async function GET(request: NextRequest) {
   try {
     const handler = handlers.GET;
     return await handler(request);
@@ -18,7 +18,7 @@ export async function GET(request: Request) {
   }
 }
 
-export async function POST(request: Request) {
+export async function POST(request: NextRequest) {
   try {
     const handler = handlers.POST;
     return await handler(request);
