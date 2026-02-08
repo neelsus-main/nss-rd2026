@@ -1,13 +1,13 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, Suspense } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import Sidebar from "@/components/Sidebar";
 import Link from "next/link";
 
 const ACTIVITY_TYPES = ["Call", "Email", "Meeting", "Task", "Note"];
 
-export default function NewActivityPage() {
+function NewActivityForm() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const [loading, setLoading] = useState(false);
@@ -265,5 +265,35 @@ export default function NewActivityPage() {
         </div>
       </main>
     </div>
+  );
+}
+
+export default function NewActivityPage() {
+  return (
+    <Suspense fallback={
+      <div className="flex h-screen bg-zinc-50 dark:bg-black">
+        <Sidebar />
+        <main className="flex-1 overflow-y-auto">
+          <div className="mx-auto max-w-4xl px-4 py-8 sm:px-6 lg:px-8">
+            <div className="mb-8">
+              <Link
+                href="/dashboard/activities"
+                className="text-sm text-zinc-600 hover:text-black dark:text-zinc-400 dark:hover:text-white"
+              >
+                ← Back to Activities
+              </Link>
+              <h1 className="mt-4 text-3xl font-bold text-black dark:text-white">
+                New Activity
+              </h1>
+            </div>
+            <div className="rounded-lg border border-zinc-200 bg-white p-6 dark:border-zinc-800 dark:bg-zinc-900">
+              <p className="text-zinc-600 dark:text-zinc-400">Loading...</p>
+            </div>
+          </div>
+        </main>
+      </div>
+    }>
+      <NewActivityForm />
+    </Suspense>
   );
 }
