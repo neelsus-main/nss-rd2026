@@ -41,72 +41,75 @@ model Session {
 // CRM Models
 
 model Account {
-  id            String    @id @default(cuid())
-  name          String
-  website       String?
-  industry      String?
-  phone         String?
-  email         String?
-  billingStreet String?
-  billingCity   String?
-  billingState  String?
-  billingZip    String?
-  billingCountry String?
-  description   String?
-  annualRevenue Float?
-  employeeCount Int?
-  ownerId       String?
-  owner         User?     @relation("AccountOwner", fields: [ownerId], references: [id])
-  contacts      Contact[]
-  deals         Deal[]
-  activities    Activity[]
-  notes         Note[]
-  createdAt     DateTime  @default(now())
-  updatedAt     DateTime  @updatedAt
+  id              String    @id @default(cuid())
+  name            String
+  website         String?
+  industry        String?
+  phone           String?
+  email           String?
+  billingStreet   String?
+  billingCity     String?
+  billingState    String?
+  billingZip      String?
+  billingCountry  String?
+  description     String?
+  annualRevenue   Float?
+  employeeCount   Int?
+  hubspotRecordId String?   @unique
+  ownerId         String?
+  owner           User?     @relation("AccountOwner", fields: [ownerId], references: [id])
+  contacts        Contact[]
+  deals           Deal[]
+  activities      Activity[]
+  notes           Note[]
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
 }
 
 model Contact {
-  id            String    @id @default(cuid())
-  firstName     String
-  lastName      String
-  email         String?
-  phone         String?
-  mobile        String?
-  title         String?
-  department    String?
-  mailingStreet String?
-  mailingCity   String?
-  mailingState  String?
-  mailingZip    String?
-  mailingCountry String?
-  accountId     String?
-  account       Account?  @relation(fields: [accountId], references: [id], onDelete: SetNull)
-  ownerId       String?
-  owner         User?     @relation("ContactOwner", fields: [ownerId], references: [id])
-  deals         DealContact[]
-  activities    Activity[]
-  notes         Note[]
-  convertedFrom Lead?     @relation("ConvertedLead")
-  createdAt     DateTime  @default(now())
-  updatedAt     DateTime  @updatedAt
+  id              String    @id @default(cuid())
+  firstName       String
+  lastName        String
+  email           String?
+  phone           String?
+  mobile          String?
+  title           String?
+  department      String?
+  mailingStreet   String?
+  mailingCity     String?
+  mailingState    String?
+  mailingZip      String?
+  mailingCountry  String?
+  hubspotRecordId String?   @unique
+  accountId       String?
+  account         Account?  @relation(fields: [accountId], references: [id], onDelete: SetNull)
+  ownerId         String?
+  owner           User?     @relation("ContactOwner", fields: [ownerId], references: [id])
+  deals           DealContact[]
+  activities      Activity[]
+  notes           Note[]
+  convertedFrom   Lead?     @relation("ConvertedLead")
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
 }
 
 model Deal {
-  id            String    @id @default(cuid())
-  name          String
-  amount        Float
-  stage         String    @default("Prospecting") // Prospecting, Qualification, Proposal, Negotiation, Closed Won, Closed Lost
-  probability   Int       @default(0) // 0-100
-  closeDate     DateTime?
-  accountId     String?
-  account       Account?  @relation(fields: [accountId], references: [id], onDelete: SetNull)
-  ownerId       String?
-  owner         User?     @relation("DealOwner", fields: [ownerId], references: [id])
-  contacts      DealContact[]
-  activities    Activity[]
-  notes         Note[]
-  createdAt     DateTime  @default(now())
-  updatedAt     DateTime  @updatedAt
+  id              String    @id @default(cuid())
+  name            String
+  amount          Float
+  stage           String    @default("Prospecting") // Prospecting, Qualification, Proposal, Negotiation, Closed Won, Closed Lost
+  probability     Int       @default(0) // 0-100
+  closeDate       DateTime?
+  hubspotRecordId String?   @unique
+  accountId       String?
+  account         Account?  @relation(fields: [accountId], references: [id], onDelete: SetNull)
+  ownerId         String?
+  owner           User?     @relation("DealOwner", fields: [ownerId], references: [id])
+  contacts        DealContact[]
+  activities      Activity[]
+  notes           Note[]
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
 }
 
 model DealContact {

@@ -4,7 +4,7 @@ import Sidebar from "@/components/Sidebar";
 import prisma from "@/lib/prisma";
 import Link from "next/link";
 
-export default async function AccountDetailPage({
+export default async function DealDetailPage({
   params,
 }: {
   params: Promise<{ id: string }>;
@@ -16,12 +16,14 @@ export default async function AccountDetailPage({
   }
 
   const { id } = await params;
-  const account = await prisma.account.findUnique({
+  const deal = await prisma.deal.findUnique({
     where: { id },
     include: {
+      account: true,
       owner: true,
-      contacts: true,
-      deals: true,
+      contacts: {
+        include: { contact: true },
+      },
       activities: {
         include: { owner: true },
         orderBy: { createdAt: "desc" },
@@ -35,9 +37,18 @@ export default async function AccountDetailPage({
     },
   });
 
-  if (!account) {
-    redirect("/dashboard/accounts");
+  if (!deal) {
+    redirect("/dashboard/deals");
   }
+
+  const stageColors: Record<string, string> = {
+    "Prospecting": "bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200",
+    "Qualification": "bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200",
+    "Proposal": "bg-purple-100 text-purple-800 dark:bg-purple-900 dark:text-purple-200",
+    "Negotiation": "bg-orange-100 text-orange-800 dark:bg-orange-900 dark:text-orange-200",
+    "Closed Won": "bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200",
+    "Closed Lost": "bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200",
+  };
 
   return (
     <div className="flex h-screen bg-zinc-50 dark:bg-black">
@@ -46,161 +57,117 @@ export default async function AccountDetailPage({
         <div className="mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:px-8">
           <div className="mb-8">
             <Link
-              href="/dashboard/accounts"
+              href="/dashboard/deals"
               className="text-sm text-zinc-600 hover:text-black dark:text-zinc-400 dark:hover:text-white"
             >
-              ← Back to Accounts
+              ← Back to Deals
             </Link>
             <h1 className="mt-4 text-3xl font-bold text-black dark:text-white">
-              {account.name}
+              {deal.name}
             </h1>
           </div>
 
           <div className="grid gap-6 lg:grid-cols-3">
             <div className="lg:col-span-2 space-y-6">
-              {/* Account Details */}
+              {/* Deal Details */}
               <div className="rounded-lg border border-zinc-200 bg-white p-6 dark:border-zinc-800 dark:bg-zinc-900">
                 <h2 className="mb-4 text-lg font-semibold text-black dark:text-white">
-                  Account Information
+                  Deal Information
                 </h2>
                 <div className="grid gap-4 sm:grid-cols-2">
                   <div>
                     <p className="text-sm font-medium text-zinc-600 dark:text-zinc-400">
-                      Industry
+                      Amount
                     </p>
-                    <p className="mt-1 text-black dark:text-white">
-                      {account.industry || "-"}
-                    </p>
-                  </div>
-                  <div>
-                    <p className="text-sm font-medium text-zinc-600 dark:text-zinc-400">
-                      Website
-                    </p>
-                    <p className="mt-1 text-black dark:text-white">
-                      {account.website ? (
-                        <a
-                          href={account.website}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className="text-blue-600 hover:underline dark:text-blue-400"
-                        >
-                          {account.website}
-                        </a>
-                      ) : (
-                        "-"
-                      )}
+                    <p className="mt-1 text-lg font-semibold text-black dark:text-white">
+                      ${deal.amount.toLocaleString()}
                     </p>
                   </div>
                   <div>
                     <p className="text-sm font-medium text-zinc-600 dark:text-zinc-400">
-                      Phone
+                      Stage
                     </p>
-                    <p className="mt-1 text-black dark:text-white">
-                      {account.phone || "-"}
+                    <p className="mt-1">
+                      <span
+                        className={`inline-flex rounded-full px-2 py-1 text-xs font-semibold ${
+                          stageColors[deal.stage] || "bg-zinc-100 text-zinc-800 dark:bg-zinc-800 dark:text-zinc-200"
+                        }`}
+                      >
+                        {deal.stage}
+                      </span>
                     </p>
                   </div>
                   <div>
                     <p className="text-sm font-medium text-zinc-600 dark:text-zinc-400">
-                      Email
+                      Probability
                     </p>
                     <p className="mt-1 text-black dark:text-white">
-                      {account.email || "-"}
+                      {deal.probability}%
                     </p>
                   </div>
-                  {account.hubspotRecordId && (
+                  <div>
+                    <p className="text-sm font-medium text-zinc-600 dark:text-zinc-400">
+                      Expected Close Date
+                    </p>
+                    <p className="mt-1 text-black dark:text-white">
+                      {deal.closeDate
+                        ? new Date(deal.closeDate).toLocaleDateString()
+                        : "-"}
+                    </p>
+                  </div>
+                  {deal.hubspotRecordId && (
                     <div>
                       <p className="text-sm font-medium text-zinc-600 dark:text-zinc-400">
                         Hubspot Record ID
                       </p>
                       <p className="mt-1 text-black dark:text-white">
-                        {account.hubspotRecordId}
+                        {deal.hubspotRecordId}
                       </p>
                     </div>
                   )}
-                  {account.description && (
-                    <div className="sm:col-span-2">
-                      <p className="text-sm font-medium text-zinc-600 dark:text-zinc-400">
-                        Description
-                      </p>
-                      <p className="mt-1 text-black dark:text-white">
-                        {account.description}
-                      </p>
-                    </div>
-                  )}
+                  <div className="sm:col-span-2">
+                    <p className="text-sm font-medium text-zinc-600 dark:text-zinc-400">
+                      Account
+                    </p>
+                    <p className="mt-1 text-black dark:text-white">
+                      {deal.account ? (
+                        <Link
+                          href={`/dashboard/accounts/${deal.account.id}`}
+                          className="text-blue-600 hover:underline dark:text-blue-400"
+                        >
+                          {deal.account.name}
+                        </Link>
+                      ) : (
+                        "-"
+                      )}
+                    </p>
+                  </div>
                 </div>
               </div>
 
               {/* Contacts */}
               <div className="rounded-lg border border-zinc-200 bg-white p-6 dark:border-zinc-800 dark:bg-zinc-900">
-                <div className="mb-4 flex items-center justify-between">
-                  <h2 className="text-lg font-semibold text-black dark:text-white">
-                    Contacts ({account.contacts.length})
-                  </h2>
-                  <Link
-                    href={`/dashboard/contacts/new?accountId=${account.id}`}
-                    className="text-sm text-black hover:underline dark:text-white"
-                  >
-                    + Add Contact
-                  </Link>
-                </div>
+                <h2 className="mb-4 text-lg font-semibold text-black dark:text-white">
+                  Contacts ({deal.contacts.length})
+                </h2>
                 <div className="space-y-3">
-                  {account.contacts.map((contact) => (
+                  {deal.contacts.map((dealContact) => (
                     <Link
-                      key={contact.id}
-                      href={`/dashboard/contacts/${contact.id}`}
+                      key={dealContact.contact.id}
+                      href={`/dashboard/contacts/${dealContact.contact.id}`}
                       className="block rounded-lg border border-zinc-200 p-3 hover:bg-zinc-50 dark:border-zinc-800 dark:hover:bg-zinc-800"
                     >
                       <p className="font-medium text-black dark:text-white">
-                        {contact.firstName} {contact.lastName}
+                        {dealContact.contact.firstName} {dealContact.contact.lastName}
                       </p>
                       <p className="text-sm text-zinc-600 dark:text-zinc-400">
-                        {contact.email || contact.phone || "-"}
+                        {dealContact.contact.email || dealContact.contact.phone || "-"}
                       </p>
                     </Link>
                   ))}
-                  {account.contacts.length === 0 && (
+                  {deal.contacts.length === 0 && (
                     <p className="text-sm text-zinc-500 dark:text-zinc-400">
                       No contacts yet
-                    </p>
-                  )}
-                </div>
-              </div>
-
-              {/* Deals */}
-              <div className="rounded-lg border border-zinc-200 bg-white p-6 dark:border-zinc-800 dark:bg-zinc-900">
-                <div className="mb-4 flex items-center justify-between">
-                  <h2 className="text-lg font-semibold text-black dark:text-white">
-                    Deals ({account.deals.length})
-                  </h2>
-                  <Link
-                    href={`/dashboard/deals/new?accountId=${account.id}`}
-                    className="text-sm text-black hover:underline dark:text-white"
-                  >
-                    + Add Deal
-                  </Link>
-                </div>
-                <div className="space-y-3">
-                  {account.deals.map((deal) => (
-                    <Link
-                      key={deal.id}
-                      href={`/dashboard/deals/${deal.id}`}
-                      className="block rounded-lg border border-zinc-200 p-3 hover:bg-zinc-50 dark:border-zinc-800 dark:hover:bg-zinc-800"
-                    >
-                      <div className="flex items-center justify-between">
-                        <div>
-                          <p className="font-medium text-black dark:text-white">
-                            {deal.name}
-                          </p>
-                          <p className="text-sm text-zinc-600 dark:text-zinc-400">
-                            {deal.stage} • ${deal.amount.toLocaleString()}
-                          </p>
-                        </div>
-                      </div>
-                    </Link>
-                  ))}
-                  {account.deals.length === 0 && (
-                    <p className="text-sm text-zinc-500 dark:text-zinc-400">
-                      No deals yet
                     </p>
                   )}
                 </div>
@@ -212,7 +179,7 @@ export default async function AccountDetailPage({
                   Notes
                 </h2>
                 <div className="space-y-4">
-                  {account.notes.map((note) => (
+                  {deal.notes.map((note) => (
                     <div
                       key={note.id}
                       className="border-b border-zinc-200 pb-4 dark:border-zinc-800"
@@ -231,7 +198,7 @@ export default async function AccountDetailPage({
                       </p>
                     </div>
                   ))}
-                  {account.notes.length === 0 && (
+                  {deal.notes.length === 0 && (
                     <p className="text-sm text-zinc-500 dark:text-zinc-400">
                       No notes yet
                     </p>
@@ -250,29 +217,9 @@ export default async function AccountDetailPage({
                   <div>
                     <p className="text-zinc-600 dark:text-zinc-400">Owner</p>
                     <p className="mt-1 text-black dark:text-white">
-                      {account.owner?.name || account.owner?.email || "-"}
+                      {deal.owner?.name || deal.owner?.email || "-"}
                     </p>
                   </div>
-                  {account.annualRevenue && (
-                    <div>
-                      <p className="text-zinc-600 dark:text-zinc-400">
-                        Annual Revenue
-                      </p>
-                      <p className="mt-1 text-black dark:text-white">
-                        ${account.annualRevenue.toLocaleString()}
-                      </p>
-                    </div>
-                  )}
-                  {account.employeeCount && (
-                    <div>
-                      <p className="text-zinc-600 dark:text-zinc-400">
-                        Employees
-                      </p>
-                      <p className="mt-1 text-black dark:text-white">
-                        {account.employeeCount}
-                      </p>
-                    </div>
-                  )}
                 </div>
               </div>
 
@@ -282,7 +229,7 @@ export default async function AccountDetailPage({
                   Recent Activities
                 </h3>
                 <div className="space-y-3">
-                  {account.activities.map((activity) => (
+                  {deal.activities.map((activity) => (
                     <div key={activity.id} className="text-sm">
                       <p className="font-medium text-black dark:text-white">
                         {activity.subject}
@@ -293,7 +240,7 @@ export default async function AccountDetailPage({
                       </p>
                     </div>
                   ))}
-                  {account.activities.length === 0 && (
+                  {deal.activities.length === 0 && (
                     <p className="text-sm text-zinc-500 dark:text-zinc-400">
                       No activities yet
                     </p>

@@ -67,6 +67,7 @@ export async function PUT(
       probability,
       closeDate,
       accountId,
+      hubspotRecordId,
     } = body;
 
     const deal = await prisma.deal.update({
@@ -77,6 +78,7 @@ export async function PUT(
         stage,
         probability: probability ? parseInt(probability) : undefined,
         closeDate: closeDate ? new Date(closeDate) : null,
+        hubspotRecordId: hubspotRecordId !== undefined ? hubspotRecordId : undefined,
         accountId: accountId || null,
       },
       include: {

@@ -49,6 +49,7 @@ export async function POST(request: NextRequest) {
       mailingZip,
       mailingCountry,
       accountId,
+      hubspotRecordId,
     } = body;
 
     if (!firstName || !lastName) {
@@ -72,6 +73,7 @@ export async function POST(request: NextRequest) {
         mailingState,
         mailingZip,
         mailingCountry,
+        hubspotRecordId: hubspotRecordId || null,
         accountId: accountId || null,
         ownerId: session.user.id,
       },

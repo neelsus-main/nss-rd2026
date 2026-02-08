@@ -4,7 +4,7 @@ import Sidebar from "@/components/Sidebar";
 import prisma from "@/lib/prisma";
 import Link from "next/link";
 
-export default async function AccountDetailPage({
+export default async function ContactDetailPage({
   params,
 }: {
   params: Promise<{ id: string }>;
@@ -16,12 +16,14 @@ export default async function AccountDetailPage({
   }
 
   const { id } = await params;
-  const account = await prisma.account.findUnique({
+  const contact = await prisma.contact.findUnique({
     where: { id },
     include: {
+      account: true,
       owner: true,
-      contacts: true,
-      deals: true,
+      deals: {
+        include: { deal: true },
+      },
       activities: {
         include: { owner: true },
         orderBy: { createdAt: "desc" },
@@ -35,8 +37,8 @@ export default async function AccountDetailPage({
     },
   });
 
-  if (!account) {
-    redirect("/dashboard/accounts");
+  if (!contact) {
+    redirect("/dashboard/contacts");
   }
 
   return (
@@ -46,49 +48,30 @@ export default async function AccountDetailPage({
         <div className="mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:px-8">
           <div className="mb-8">
             <Link
-              href="/dashboard/accounts"
+              href="/dashboard/contacts"
               className="text-sm text-zinc-600 hover:text-black dark:text-zinc-400 dark:hover:text-white"
             >
-              ← Back to Accounts
+              ← Back to Contacts
             </Link>
             <h1 className="mt-4 text-3xl font-bold text-black dark:text-white">
-              {account.name}
+              {contact.firstName} {contact.lastName}
             </h1>
           </div>
 
           <div className="grid gap-6 lg:grid-cols-3">
             <div className="lg:col-span-2 space-y-6">
-              {/* Account Details */}
+              {/* Contact Details */}
               <div className="rounded-lg border border-zinc-200 bg-white p-6 dark:border-zinc-800 dark:bg-zinc-900">
                 <h2 className="mb-4 text-lg font-semibold text-black dark:text-white">
-                  Account Information
+                  Contact Information
                 </h2>
                 <div className="grid gap-4 sm:grid-cols-2">
                   <div>
                     <p className="text-sm font-medium text-zinc-600 dark:text-zinc-400">
-                      Industry
+                      Email
                     </p>
                     <p className="mt-1 text-black dark:text-white">
-                      {account.industry || "-"}
-                    </p>
-                  </div>
-                  <div>
-                    <p className="text-sm font-medium text-zinc-600 dark:text-zinc-400">
-                      Website
-                    </p>
-                    <p className="mt-1 text-black dark:text-white">
-                      {account.website ? (
-                        <a
-                          href={account.website}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className="text-blue-600 hover:underline dark:text-blue-400"
-                        >
-                          {account.website}
-                        </a>
-                      ) : (
-                        "-"
-                      )}
+                      {contact.email || "-"}
                     </p>
                   </div>
                   <div>
@@ -96,109 +79,84 @@ export default async function AccountDetailPage({
                       Phone
                     </p>
                     <p className="mt-1 text-black dark:text-white">
-                      {account.phone || "-"}
+                      {contact.phone || "-"}
                     </p>
                   </div>
                   <div>
                     <p className="text-sm font-medium text-zinc-600 dark:text-zinc-400">
-                      Email
+                      Mobile
                     </p>
                     <p className="mt-1 text-black dark:text-white">
-                      {account.email || "-"}
+                      {contact.mobile || "-"}
                     </p>
                   </div>
-                  {account.hubspotRecordId && (
+                  <div>
+                    <p className="text-sm font-medium text-zinc-600 dark:text-zinc-400">
+                      Title
+                    </p>
+                    <p className="mt-1 text-black dark:text-white">
+                      {contact.title || "-"}
+                    </p>
+                  </div>
+                  <div>
+                    <p className="text-sm font-medium text-zinc-600 dark:text-zinc-400">
+                      Department
+                    </p>
+                    <p className="mt-1 text-black dark:text-white">
+                      {contact.department || "-"}
+                    </p>
+                  </div>
+                  {contact.hubspotRecordId && (
                     <div>
                       <p className="text-sm font-medium text-zinc-600 dark:text-zinc-400">
                         Hubspot Record ID
                       </p>
                       <p className="mt-1 text-black dark:text-white">
-                        {account.hubspotRecordId}
+                        {contact.hubspotRecordId}
                       </p>
                     </div>
                   )}
-                  {account.description && (
-                    <div className="sm:col-span-2">
-                      <p className="text-sm font-medium text-zinc-600 dark:text-zinc-400">
-                        Description
-                      </p>
-                      <p className="mt-1 text-black dark:text-white">
-                        {account.description}
-                      </p>
-                    </div>
-                  )}
-                </div>
-              </div>
-
-              {/* Contacts */}
-              <div className="rounded-lg border border-zinc-200 bg-white p-6 dark:border-zinc-800 dark:bg-zinc-900">
-                <div className="mb-4 flex items-center justify-between">
-                  <h2 className="text-lg font-semibold text-black dark:text-white">
-                    Contacts ({account.contacts.length})
-                  </h2>
-                  <Link
-                    href={`/dashboard/contacts/new?accountId=${account.id}`}
-                    className="text-sm text-black hover:underline dark:text-white"
-                  >
-                    + Add Contact
-                  </Link>
-                </div>
-                <div className="space-y-3">
-                  {account.contacts.map((contact) => (
-                    <Link
-                      key={contact.id}
-                      href={`/dashboard/contacts/${contact.id}`}
-                      className="block rounded-lg border border-zinc-200 p-3 hover:bg-zinc-50 dark:border-zinc-800 dark:hover:bg-zinc-800"
-                    >
-                      <p className="font-medium text-black dark:text-white">
-                        {contact.firstName} {contact.lastName}
-                      </p>
-                      <p className="text-sm text-zinc-600 dark:text-zinc-400">
-                        {contact.email || contact.phone || "-"}
-                      </p>
-                    </Link>
-                  ))}
-                  {account.contacts.length === 0 && (
-                    <p className="text-sm text-zinc-500 dark:text-zinc-400">
-                      No contacts yet
+                  <div className="sm:col-span-2">
+                    <p className="text-sm font-medium text-zinc-600 dark:text-zinc-400">
+                      Account
                     </p>
-                  )}
+                    <p className="mt-1 text-black dark:text-white">
+                      {contact.account ? (
+                        <Link
+                          href={`/dashboard/accounts/${contact.account.id}`}
+                          className="text-blue-600 hover:underline dark:text-blue-400"
+                        >
+                          {contact.account.name}
+                        </Link>
+                      ) : (
+                        "-"
+                      )}
+                    </p>
+                  </div>
                 </div>
               </div>
 
               {/* Deals */}
               <div className="rounded-lg border border-zinc-200 bg-white p-6 dark:border-zinc-800 dark:bg-zinc-900">
-                <div className="mb-4 flex items-center justify-between">
-                  <h2 className="text-lg font-semibold text-black dark:text-white">
-                    Deals ({account.deals.length})
-                  </h2>
-                  <Link
-                    href={`/dashboard/deals/new?accountId=${account.id}`}
-                    className="text-sm text-black hover:underline dark:text-white"
-                  >
-                    + Add Deal
-                  </Link>
-                </div>
+                <h2 className="mb-4 text-lg font-semibold text-black dark:text-white">
+                  Deals ({contact.deals.length})
+                </h2>
                 <div className="space-y-3">
-                  {account.deals.map((deal) => (
+                  {contact.deals.map((dealContact) => (
                     <Link
-                      key={deal.id}
-                      href={`/dashboard/deals/${deal.id}`}
+                      key={dealContact.deal.id}
+                      href={`/dashboard/deals/${dealContact.deal.id}`}
                       className="block rounded-lg border border-zinc-200 p-3 hover:bg-zinc-50 dark:border-zinc-800 dark:hover:bg-zinc-800"
                     >
-                      <div className="flex items-center justify-between">
-                        <div>
-                          <p className="font-medium text-black dark:text-white">
-                            {deal.name}
-                          </p>
-                          <p className="text-sm text-zinc-600 dark:text-zinc-400">
-                            {deal.stage} • ${deal.amount.toLocaleString()}
-                          </p>
-                        </div>
-                      </div>
+                      <p className="font-medium text-black dark:text-white">
+                        {dealContact.deal.name}
+                      </p>
+                      <p className="text-sm text-zinc-600 dark:text-zinc-400">
+                        {dealContact.deal.stage} • ${dealContact.deal.amount.toLocaleString()}
+                      </p>
                     </Link>
                   ))}
-                  {account.deals.length === 0 && (
+                  {contact.deals.length === 0 && (
                     <p className="text-sm text-zinc-500 dark:text-zinc-400">
                       No deals yet
                     </p>
@@ -212,7 +170,7 @@ export default async function AccountDetailPage({
                   Notes
                 </h2>
                 <div className="space-y-4">
-                  {account.notes.map((note) => (
+                  {contact.notes.map((note) => (
                     <div
                       key={note.id}
                       className="border-b border-zinc-200 pb-4 dark:border-zinc-800"
@@ -231,7 +189,7 @@ export default async function AccountDetailPage({
                       </p>
                     </div>
                   ))}
-                  {account.notes.length === 0 && (
+                  {contact.notes.length === 0 && (
                     <p className="text-sm text-zinc-500 dark:text-zinc-400">
                       No notes yet
                     </p>
@@ -250,29 +208,9 @@ export default async function AccountDetailPage({
                   <div>
                     <p className="text-zinc-600 dark:text-zinc-400">Owner</p>
                     <p className="mt-1 text-black dark:text-white">
-                      {account.owner?.name || account.owner?.email || "-"}
+                      {contact.owner?.name || contact.owner?.email || "-"}
                     </p>
                   </div>
-                  {account.annualRevenue && (
-                    <div>
-                      <p className="text-zinc-600 dark:text-zinc-400">
-                        Annual Revenue
-                      </p>
-                      <p className="mt-1 text-black dark:text-white">
-                        ${account.annualRevenue.toLocaleString()}
-                      </p>
-                    </div>
-                  )}
-                  {account.employeeCount && (
-                    <div>
-                      <p className="text-zinc-600 dark:text-zinc-400">
-                        Employees
-                      </p>
-                      <p className="mt-1 text-black dark:text-white">
-                        {account.employeeCount}
-                      </p>
-                    </div>
-                  )}
                 </div>
               </div>
 
@@ -282,7 +220,7 @@ export default async function AccountDetailPage({
                   Recent Activities
                 </h3>
                 <div className="space-y-3">
-                  {account.activities.map((activity) => (
+                  {contact.activities.map((activity) => (
                     <div key={activity.id} className="text-sm">
                       <p className="font-medium text-black dark:text-white">
                         {activity.subject}
@@ -293,7 +231,7 @@ export default async function AccountDetailPage({
                       </p>
                     </div>
                   ))}
-                  {account.activities.length === 0 && (
+                  {contact.activities.length === 0 && (
                     <p className="text-sm text-zinc-500 dark:text-zinc-400">
                       No activities yet
                     </p>

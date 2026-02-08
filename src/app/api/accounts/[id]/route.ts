@@ -72,6 +72,7 @@ export async function PUT(
       description,
       annualRevenue,
       employeeCount,
+      hubspotRecordId,
       ownerId,
     } = body;
 
@@ -91,6 +92,7 @@ export async function PUT(
         description,
         annualRevenue: annualRevenue ? parseFloat(annualRevenue) : null,
         employeeCount: employeeCount ? parseInt(employeeCount) : null,
+        hubspotRecordId: hubspotRecordId !== undefined ? hubspotRecordId : undefined,
         ownerId: ownerId || session.user.id,
       },
       include: {

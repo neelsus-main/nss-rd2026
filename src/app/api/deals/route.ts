@@ -46,6 +46,7 @@ export async function POST(request: NextRequest) {
       closeDate,
       accountId,
       contactIds,
+      hubspotRecordId,
     } = body;
 
     if (!name || !amount) {
@@ -62,6 +63,7 @@ export async function POST(request: NextRequest) {
         stage: stage || "Prospecting",
         probability: probability ? parseInt(probability) : 0,
         closeDate: closeDate ? new Date(closeDate) : null,
+        hubspotRecordId: hubspotRecordId || null,
         accountId: accountId || null,
         ownerId: session.user.id,
         contacts: contactIds

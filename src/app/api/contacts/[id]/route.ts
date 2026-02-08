@@ -74,6 +74,7 @@ export async function PUT(
       mailingZip,
       mailingCountry,
       accountId,
+      hubspotRecordId,
     } = body;
 
     const contact = await prisma.contact.update({
@@ -91,6 +92,7 @@ export async function PUT(
         mailingState,
         mailingZip,
         mailingCountry,
+        hubspotRecordId: hubspotRecordId !== undefined ? hubspotRecordId : undefined,
         accountId: accountId || null,
       },
       include: {

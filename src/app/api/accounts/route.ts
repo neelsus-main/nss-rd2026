@@ -51,6 +51,7 @@ export async function POST(request: NextRequest) {
       description,
       annualRevenue,
       employeeCount,
+      hubspotRecordId,
     } = body;
 
     if (!name) {
@@ -75,6 +76,7 @@ export async function POST(request: NextRequest) {
         description,
         annualRevenue: annualRevenue ? parseFloat(annualRevenue) : null,
         employeeCount: employeeCount ? parseInt(employeeCount) : null,
+        hubspotRecordId: hubspotRecordId || null,
         ownerId: session.user.id,
       },
       include: {
