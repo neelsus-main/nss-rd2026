@@ -58,7 +58,7 @@ export default async function AccountsPage() {
                       Contacts
                     </th>
                     <th className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-zinc-500 dark:text-zinc-400">
-                      Deals
+                      Number of Deals
                     </th>
                     <th className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-zinc-500 dark:text-zinc-400">
                       Owner
