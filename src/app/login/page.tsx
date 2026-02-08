@@ -25,14 +25,19 @@ export default function LoginPage() {
       });
 
       if (result?.error) {
+        console.error("Login error:", result.error);
         setError("Invalid email or password");
-      } else {
+        setLoading(false);
+      } else if (result?.ok) {
         router.push("/dashboard");
         router.refresh();
+      } else {
+        setError("An unexpected error occurred. Please try again.");
+        setLoading(false);
       }
     } catch (err) {
+      console.error("Login exception:", err);
       setError("An error occurred. Please try again.");
-    } finally {
       setLoading(false);
     }
   };
