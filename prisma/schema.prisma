@@ -17,9 +17,16 @@ model User {
   email         String    @unique
   name          String?
   password      String
+  role          String    @default("user") // user, admin
   createdAt     DateTime  @default(now())
   updatedAt     DateTime  @updatedAt
   sessions      Session[]
+  ownedAccounts Account[] @relation("AccountOwner")
+  ownedContacts Contact[] @relation("ContactOwner")
+  ownedDeals    Deal[]    @relation("DealOwner")
+  ownedLeads    Lead[]    @relation("LeadOwner")
+  activities    Activity[] @relation("ActivityOwner")
+  notes         Note[]    @relation("NoteOwner")
 }
 
 model Session {
@@ -29,6 +36,151 @@ model Session {
   expires      DateTime
   user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
   createdAt    DateTime @default(now())
+}
+
+// CRM Models
+
+model Account {
+  id            String    @id @default(cuid())
+  name          String
+  website       String?
+  industry      String?
+  phone         String?
+  email         String?
+  billingStreet String?
+  billingCity   String?
+  billingState  String?
+  billingZip    String?
+  billingCountry String?
+  description   String?
+  annualRevenue Float?
+  employeeCount Int?
+  ownerId       String?
+  owner         User?     @relation("AccountOwner", fields: [ownerId], references: [id])
+  contacts      Contact[]
+  deals         Deal[]
+  activities    Activity[]
+  notes         Note[]
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+}
+
+model Contact {
+  id            String    @id @default(cuid())
+  firstName     String
+  lastName      String
+  email         String?
+  phone         String?
+  mobile        String?
+  title         String?
+  department    String?
+  mailingStreet String?
+  mailingCity   String?
+  mailingState  String?
+  mailingZip    String?
+  mailingCountry String?
+  accountId     String?
+  account       Account?  @relation(fields: [accountId], references: [id], onDelete: SetNull)
+  ownerId       String?
+  owner         User?     @relation("ContactOwner", fields: [ownerId], references: [id])
+  deals         DealContact[]
+  activities    Activity[]
+  notes         Note[]
+  convertedFrom Lead?     @relation("ConvertedLead")
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+}
+
+model Deal {
+  id            String    @id @default(cuid())
+  name          String
+  amount        Float
+  stage         String    @default("Prospecting") // Prospecting, Qualification, Proposal, Negotiation, Closed Won, Closed Lost
+  probability   Int       @default(0) // 0-100
+  closeDate     DateTime?
+  accountId     String?
+  account       Account?  @relation(fields: [accountId], references: [id], onDelete: SetNull)
+  ownerId       String?
+  owner         User?     @relation("DealOwner", fields: [ownerId], references: [id])
+  contacts      DealContact[]
+  activities    Activity[]
+  notes         Note[]
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+}
+
+model DealContact {
+  id        String   @id @default(cuid())
+  dealId    String
+  deal      Deal     @relation(fields: [dealId], references: [id], onDelete: Cascade)
+  contactId String
+  contact   Contact  @relation(fields: [contactId], references: [id], onDelete: Cascade)
+  role      String?  // Decision Maker, Influencer, etc.
+  createdAt DateTime @default(now())
+
+  @@unique([dealId, contactId])
+}
+
+model Lead {
+  id            String    @id @default(cuid())
+  firstName     String
+  lastName      String
+  email         String?
+  phone         String?
+  company       String?
+  title         String?
+  industry   String?
+  status         String    @default("New") // New, Contacted, Qualified, Converted, Lost
+  source        String?   // Website, Referral, Cold Call, etc.
+  score         Int       @default(0)
+  ownerId       String?
+  owner         User?     @relation("LeadOwner", fields: [ownerId], references: [id])
+  convertedToContactId String? @unique
+  convertedToContact Contact? @relation("ConvertedLead", fields: [convertedToContactId], references: [id])
+  activities    Activity[]
+  notes         Note[]
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+}
+
+model Activity {
+  id          String   @id @default(cuid())
+  type        String   // Call, Email, Meeting, Task, Note
+  subject     String
+  description String?
+  dueDate     DateTime?
+  completed   Boolean  @default(false)
+  completedAt DateTime?
+  accountId   String?
+  account     Account? @relation(fields: [accountId], references: [id], onDelete: Cascade)
+  contactId   String?
+  contact     Contact? @relation(fields: [contactId], references: [id], onDelete: Cascade)
+  dealId      String?
+  deal        Deal?    @relation(fields: [dealId], references: [id], onDelete: Cascade)
+  leadId      String?
+  lead        Lead?    @relation(fields: [leadId], references: [id], onDelete: Cascade)
+  ownerId     String
+  owner       User     @relation("ActivityOwner", fields: [ownerId], references: [id])
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+}
+
+model Note {
+  id          String   @id @default(cuid())
+  title       String?
+  content     String
+  accountId   String?
+  account     Account? @relation(fields: [accountId], references: [id], onDelete: Cascade)
+  contactId   String?
+  contact     Contact? @relation(fields: [contactId], references: [id], onDelete: Cascade)
+  dealId      String?
+  deal        Deal?    @relation(fields: [dealId], references: [id], onDelete: Cascade)
+  leadId      String?
+  lead        Lead?    @relation(fields: [leadId], references: [id], onDelete: Cascade)
+  ownerId     String
+  owner       User     @relation("NoteOwner", fields: [ownerId], references: [id])
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
 }
 
 model Post {
