@@ -83,7 +83,7 @@ export default function Home() {
         </form>
 
         <p className="text-center text-sm text-zinc-500 dark:text-zinc-600">
-          Note: Only download videos you own or have permission to download.
+          Note: dfsdf Only download videos you own or have permission to download.
         </p>
       </main>
     </div>
