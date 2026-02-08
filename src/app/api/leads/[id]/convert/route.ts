@@ -8,7 +8,7 @@ export async function POST(
 ) {
   try {
     const session = await auth();
-    if (!session?.user) {
+    if (!session?.user?.id) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
@@ -29,7 +29,6 @@ export async function POST(
         email: lead.email,
         phone: lead.phone,
         title: lead.title,
-        industry: lead.industry,
         ownerId: session.user.id,
       },
     });
