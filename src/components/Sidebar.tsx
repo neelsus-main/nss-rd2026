@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { signOut } from "@/auth";
+import { signOutAction } from "@/app/actions/auth";
 
 const navItems = [
   { href: "/dashboard", label: "Dashboard", icon: "📊" },
@@ -42,12 +42,7 @@ export default function Sidebar() {
         })}
       </nav>
       <div className="border-t border-zinc-200 p-4 dark:border-zinc-800">
-        <form
-          action={async () => {
-            "use server";
-            await signOut();
-          }}
-        >
+        <form action={signOutAction}>
           <button
             type="submit"
             className="w-full rounded-lg bg-black px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-zinc-800 dark:bg-white dark:text-black dark:hover:bg-zinc-200"
