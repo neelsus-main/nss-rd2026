@@ -19,23 +19,26 @@ export default function Home() {
         body: JSON.stringify({ url }),
       });
 
+      const data = await response.json();
+
       if (!response.ok) {
-        const data = await response.json();
         throw new Error(data.error || "Download failed");
       }
 
-      // Get the blob and trigger download
-      const blob = await response.blob();
-      const downloadUrl = window.URL.createObjectURL(blob);
-      const a = document.createElement("a");
-      a.href = downloadUrl;
-      a.download = `video-${Date.now()}.mp4`;
-      document.body.appendChild(a);
-      a.click();
-      window.URL.revokeObjectURL(downloadUrl);
-      document.body.removeChild(a);
-      
-      setUrl("");
+      if (data.success && data.downloadUrl) {
+        // Open download URL in new tab
+        const a = document.createElement("a");
+        a.href = data.downloadUrl;
+        a.download = data.filename || `video-${Date.now()}.mp4`;
+        a.target = "_blank";
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        
+        setUrl("");
+      } else {
+        throw new Error("No download URL received");
+      }
     } catch (err) {
       setError(err instanceof Error ? err.message : "An error occurred");
     } finally {

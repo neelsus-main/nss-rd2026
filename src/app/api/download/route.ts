@@ -1,8 +1,13 @@
 import { NextRequest, NextResponse } from "next/server";
-import ytdl from "@distube/ytdl-core";
 
-export const maxDuration = 60; // Increase timeout for Vercel
+export const maxDuration = 60;
 export const dynamic = "force-dynamic";
+
+// Alternative approach: Use a third-party API or redirect to download services
+// YouTube blocks automated scrapers. Options:
+// 1. Use RapidAPI YouTube downloader APIs
+// 2. Use cobalt.tools API (free, open source)
+// 3. Host your own yt-dlp service
 
 export async function POST(request: NextRequest) {
   try {
@@ -15,59 +20,57 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Validate YouTube URL
-    if (!ytdl.validateURL(url)) {
+    // Extract video ID
+    const videoIdMatch = url.match(/(?:youtu\.be\/|youtube\.com(?:\/embed\/|\/v\/|\/watch\?v=|\/watch\?.+&v=))([^&\n?#]+)/);
+    if (!videoIdMatch) {
       return NextResponse.json(
         { error: "Invalid YouTube URL" },
         { status: 400 }
       );
     }
 
-    // Better agent configuration to avoid bot detection
-    const agent = ytdl.createAgent(undefined, {
-      localAddress: undefined,
-    });
+    const videoId = videoIdMatch[1];
 
-    // Get video info with agent
-    const info = await ytdl.getInfo(url, { agent });
-    const title = info.videoDetails.title.replace(/[^a-z0-9]/gi, "_");
-
-    // Create a readable stream with better options
-    const videoStream = ytdl(url, {
-      quality: "highestvideo",
-      filter: (format) => format.container === "mp4",
-      agent,
-      requestOptions: {
-        headers: {
-          "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
-          "Accept-Language": "en-US,en;q=0.9",
-          "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
-        },
+    // Option 1: Use cobalt.tools API (free, no auth needed)
+    const cobaltResponse = await fetch("https://api.cobalt.tools/api/json", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "Accept": "application/json",
       },
+      body: JSON.stringify({
+        url: url,
+        vCodec: "h264",
+        vQuality: "720",
+        aFormat: "mp3",
+        isAudioOnly: false,
+      }),
     });
 
-    // Collect chunks
-    const chunks: Uint8Array[] = [];
-    
-    for await (const chunk of videoStream) {
-      chunks.push(chunk);
+    if (!cobaltResponse.ok) {
+      throw new Error("Failed to fetch video from cobalt.tools");
     }
 
-    // Combine chunks into a single buffer
-    const buffer = Buffer.concat(chunks);
+    const cobaltData = await cobaltResponse.json();
 
-    // Return the video file
-    return new NextResponse(buffer, {
-      headers: {
-        "Content-Type": "video/mp4",
-        "Content-Disposition": `attachment; filename="${title}.mp4"`,
-        "Content-Length": buffer.length.toString(),
-      },
-    });
+    if (cobaltData.status === "redirect" || cobaltData.status === "stream") {
+      // Return the download URL
+      return NextResponse.json({
+        success: true,
+        downloadUrl: cobaltData.url,
+        filename: `video-${videoId}.mp4`,
+      });
+    }
+
+    throw new Error("Could not retrieve download link");
+
   } catch (error) {
     console.error("Download error:", error);
     return NextResponse.json(
-      { error: error instanceof Error ? error.message : "Failed to download video. YouTube may be blocking automated downloads." },
+      { 
+        error: error instanceof Error ? error.message : "Failed to process video. YouTube has strict bot protection. Consider using the YouTube app or browser extensions instead.",
+        suggestion: "Due to YouTube's Terms of Service and bot protection, automated downloads are unreliable. Try: 1) Browser extensions, 2) Official YouTube Premium downloads, 3) Self-hosted yt-dlp"
+      },
       { status: 500 }
     );
   }
