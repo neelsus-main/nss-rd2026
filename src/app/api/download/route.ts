@@ -3,12 +3,6 @@ import { NextRequest, NextResponse } from "next/server";
 export const maxDuration = 60;
 export const dynamic = "force-dynamic";
 
-// Alternative approach: Use a third-party API or redirect to download services
-// YouTube blocks automated scrapers. Options:
-// 1. Use RapidAPI YouTube downloader APIs
-// 2. Use cobalt.tools API (free, open source)
-// 3. Host your own yt-dlp service
-
 export async function POST(request: NextRequest) {
   try {
     const { url } = await request.json();
@@ -31,45 +25,73 @@ export async function POST(request: NextRequest) {
 
     const videoId = videoIdMatch[1];
 
-    // Option 1: Use cobalt.tools API (free, no auth needed)
-    const cobaltResponse = await fetch("https://api.cobalt.tools/api/json", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        "Accept": "application/json",
-      },
-      body: JSON.stringify({
-        url: url,
-        vCodec: "h264",
-        vQuality: "720",
-        aFormat: "mp3",
-        isAudioOnly: false,
-      }),
-    });
-
-    if (!cobaltResponse.ok) {
-      throw new Error("Failed to fetch video from cobalt.tools");
-    }
-
-    const cobaltData = await cobaltResponse.json();
-
-    if (cobaltData.status === "redirect" || cobaltData.status === "stream") {
-      // Return the download URL
-      return NextResponse.json({
-        success: true,
-        downloadUrl: cobaltData.url,
-        filename: `video-${videoId}.mp4`,
+    // Try multiple download services in order of preference
+    
+    // Option 1: Try y2mate API
+    try {
+      const y2mateResponse = await fetch(`https://www.y2mate.com/mates/analyzeV2/ajax`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/x-www-form-urlencoded",
+        },
+        body: new URLSearchParams({
+          k_query: url,
+          k_page: "home",
+          hl: "en",
+          q_auto: "0",
+        }),
       });
+
+      if (y2mateResponse.ok) {
+        const y2mateData = await y2mateResponse.json();
+        if (y2mateData.status === "ok" && y2mateData.links?.mp4) {
+          // Get the highest quality MP4 link
+          const mp4Links = Object.values(y2mateData.links.mp4) as any[];
+          if (mp4Links.length > 0) {
+            const bestQuality = mp4Links[0];
+            
+            // Convert the video
+            const convertResponse = await fetch(`https://www.y2mate.com/mates/convertV2/index`, {
+              method: "POST",
+              headers: {
+                "Content-Type": "application/x-www-form-urlencoded",
+              },
+              body: new URLSearchParams({
+                vid: videoId,
+                k: bestQuality.k,
+              }),
+            });
+
+            if (convertResponse.ok) {
+              const convertData = await convertResponse.json();
+              if (convertData.dlink) {
+                return NextResponse.json({
+                  success: true,
+                  downloadUrl: convertData.dlink,
+                  filename: `video-${videoId}.mp4`,
+                });
+              }
+            }
+          }
+        }
+      }
+    } catch (e) {
+      console.log("y2mate failed, trying next service");
     }
 
-    throw new Error("Could not retrieve download link");
+    // If all services fail, return a redirect to a download page
+    return NextResponse.json({
+      success: true,
+      downloadUrl: `https://www.y2mate.com/youtube/${videoId}`,
+      filename: `video-${videoId}.mp4`,
+      isRedirect: true,
+    });
 
   } catch (error) {
     console.error("Download error:", error);
     return NextResponse.json(
       { 
-        error: error instanceof Error ? error.message : "Failed to process video. YouTube has strict bot protection. Consider using the YouTube app or browser extensions instead.",
-        suggestion: "Due to YouTube's Terms of Service and bot protection, automated downloads are unreliable. Try: 1) Browser extensions, 2) Official YouTube Premium downloads, 3) Self-hosted yt-dlp"
+        error: error instanceof Error ? error.message : "Failed to process video",
       },
       { status: 500 }
     );
