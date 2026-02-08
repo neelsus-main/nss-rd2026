@@ -7,7 +7,7 @@ import Link from "next/link";
 export default async function AccountDetailPage({
   params,
 }: {
-  params: { id: string };
+  params: Promise<{ id: string }>;
 }) {
   const session = await auth();
 
@@ -15,8 +15,9 @@ export default async function AccountDetailPage({
     redirect("/login");
   }
 
+  const { id } = await params;
   const account = await prisma.account.findUnique({
-    where: { id: params.id },
+    where: { id },
     include: {
       owner: true,
       contacts: true,

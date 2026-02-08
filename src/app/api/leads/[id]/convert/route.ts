@@ -4,7 +4,7 @@ import prisma from "@/lib/prisma";
 
 export async function POST(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     const session = await auth();
@@ -12,8 +12,9 @@ export async function POST(
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
+    const { id } = await params;
     const lead = await prisma.lead.findUnique({
-      where: { id: params.id },
+      where: { id },
     });
 
     if (!lead) {
@@ -35,7 +36,7 @@ export async function POST(
 
     // Update lead status and link to contact
     await prisma.lead.update({
-      where: { id: params.id },
+      where: { id },
       data: {
         status: "Converted",
         convertedToContactId: contact.id,
