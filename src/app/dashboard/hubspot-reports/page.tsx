@@ -48,6 +48,36 @@ async function fetchPortalId(): Promise<string | null> {
   return data.portalId ? String(data.portalId) : null;
 }
 
+async function fetchCallContactIds(callIds: string[]): Promise<Map<string, string>> {
+  const accessToken = process.env.HUBSPOT_ACCESS_TOKEN;
+  if (!accessToken || callIds.length === 0) return new Map();
+
+  const map = new Map<string, string>();
+  // Batch in chunks of 100 (API limit)
+  for (let i = 0; i < callIds.length; i += 100) {
+    const chunk = callIds.slice(i, i + 100);
+    const response = await fetch(
+      "https://api.hubapi.com/crm/v4/associations/calls/contacts/batch/read",
+      {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${accessToken}`,
+        },
+        body: JSON.stringify({ inputs: chunk.map((id) => ({ id })) }),
+        cache: "no-store",
+      }
+    );
+    if (!response.ok) continue;
+    const data = await response.json();
+    for (const result of data.results ?? []) {
+      const contactId = result.to?.[0]?.toObjectId;
+      if (contactId) map.set(result.from.id, String(contactId));
+    }
+  }
+  return map;
+}
+
 async function fetchOwners(): Promise<Map<string, string>> {
   const accessToken = process.env.HUBSPOT_ACCESS_TOKEN;
   if (!accessToken) return new Map();
@@ -250,6 +280,8 @@ export default async function HubSpotReportsPage() {
     fetchPortalId(),
   ]);
 
+  const callContactIds = await fetchCallContactIds(calls.map((c) => c.id));
+
   const completedCalls = calls.filter((c) =>
     ["COMPLETED", "CONNECTED"].includes(c.properties.hs_call_status ?? "")
   );
@@ -291,8 +323,8 @@ export default async function HubSpotReportsPage() {
       duration: formatDuration(call.properties.hs_call_duration),
       from: call.properties.hs_call_from_number || "—",
       to: call.properties.hs_call_to_number || "—",
-      hubspotUrl: portalId
-        ? `https://app.hubspot.com/contacts/${portalId}/activity/${call.id}`
+      hubspotUrl: portalId && callContactIds.get(call.id)
+        ? `https://app.hubspot.com/contacts/${portalId}/contact/${callContactIds.get(call.id)}`
         : null,
     };
   });
