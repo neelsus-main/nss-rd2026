@@ -13,6 +13,7 @@ interface CallRow {
   duration: string;
   from: string;
   to: string;
+  hubspotUrl: string | null;
 }
 
 const PAGE_SIZES = [25, 50, 100];
@@ -46,6 +47,7 @@ export default function CallsTable({ rows }: { rows: CallRow[] }) {
               <th className="px-6 py-3 text-left font-medium text-zinc-500 dark:text-zinc-400">Duration</th>
               <th className="px-6 py-3 text-left font-medium text-zinc-500 dark:text-zinc-400">From</th>
               <th className="px-6 py-3 text-left font-medium text-zinc-500 dark:text-zinc-400">To</th>
+              <th className="px-6 py-3 text-left font-medium text-zinc-500 dark:text-zinc-400"></th>
             </tr>
           </thead>
           <tbody className="divide-y divide-zinc-100 dark:divide-zinc-800">
@@ -72,6 +74,20 @@ export default function CallsTable({ rows }: { rows: CallRow[] }) {
                 <td className="px-6 py-4 text-zinc-700 dark:text-zinc-300">{row.duration}</td>
                 <td className="px-6 py-4 text-zinc-700 dark:text-zinc-300">{row.from}</td>
                 <td className="px-6 py-4 text-zinc-700 dark:text-zinc-300">{row.to}</td>
+                <td className="whitespace-nowrap px-6 py-4">
+                  {row.hubspotUrl ? (
+                    <a
+                      href={row.hubspotUrl}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="inline-flex items-center rounded-md border border-zinc-300 bg-white px-3 py-1 text-xs font-medium text-zinc-700 hover:bg-zinc-50 dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-300 dark:hover:bg-zinc-700"
+                    >
+                      View in HubSpot ↗
+                    </a>
+                  ) : (
+                    <span className="text-zinc-400 dark:text-zinc-600">—</span>
+                  )}
+                </td>
               </tr>
             ))}
           </tbody>

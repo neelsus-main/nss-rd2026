@@ -36,6 +36,18 @@ interface HubSpotOwner {
   email?: string;
 }
 
+async function fetchPortalId(): Promise<string | null> {
+  const accessToken = process.env.HUBSPOT_ACCESS_TOKEN;
+  if (!accessToken) return null;
+  const response = await fetch("https://api.hubapi.com/integrations/v1/me", {
+    headers: { Authorization: `Bearer ${accessToken}` },
+    cache: "no-store",
+  });
+  if (!response.ok) return null;
+  const data = await response.json();
+  return data.portalId ? String(data.portalId) : null;
+}
+
 async function fetchOwners(): Promise<Map<string, string>> {
   const accessToken = process.env.HUBSPOT_ACCESS_TOKEN;
   if (!accessToken) return new Map();
@@ -231,10 +243,11 @@ export default async function HubSpotReportsPage() {
   if (!session?.user) redirect("/login");
 
   const hasToken = !!process.env.HUBSPOT_ACCESS_TOKEN;
-  const [calls, outboundEmails, owners] = await Promise.all([
+  const [calls, outboundEmails, owners, portalId] = await Promise.all([
     fetchHubSpotCallsThisMonth(),
     fetchHubSpotOutboundEmailsThisMonth(),
     fetchOwners(),
+    fetchPortalId(),
   ]);
 
   const completedCalls = calls.filter((c) =>
@@ -278,6 +291,9 @@ export default async function HubSpotReportsPage() {
       duration: formatDuration(call.properties.hs_call_duration),
       from: call.properties.hs_call_from_number || "—",
       to: call.properties.hs_call_to_number || "—",
+      hubspotUrl: portalId
+        ? `https://app.hubspot.com/contacts/${portalId}/activity/${call.id}`
+        : null,
     };
   });
 
