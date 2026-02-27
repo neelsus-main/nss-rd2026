@@ -249,6 +249,7 @@ function formatTimestamp(timestamp?: string): string {
     hour: "numeric",
     minute: "2-digit",
     hour12: true,
+    timeZone: "America/Chicago",
   });
 }
 
@@ -333,7 +334,7 @@ export default async function HubSpotReportsPage() {
     <div className="flex h-screen bg-zinc-50 dark:bg-black">
       <Sidebar />
       <main className="flex-1 overflow-y-auto">
-        <div className="mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:px-8">
+        <div className="px-4 py-8 sm:px-6 lg:px-8">
           <div className="mb-8">
             <h1 className="text-3xl font-bold text-black dark:text-white">
               HubSpot Reports
