@@ -1,6 +1,7 @@
 import { auth } from "@/auth";
 import { redirect } from "next/navigation";
 import Sidebar from "@/components/Sidebar";
+import CallsTable from "./CallsTable";
 
 interface HubSpotCall {
   id: string;
@@ -193,7 +194,11 @@ function formatDuration(ms?: string): string {
 
 function formatTimestamp(timestamp?: string): string {
   if (!timestamp) return "—";
-  return new Date(parseInt(timestamp)).toLocaleString("en-US", {
+  const ms = parseInt(timestamp, 10);
+  if (isNaN(ms)) return "Invalid date";
+  const d = new Date(ms);
+  if (isNaN(d.getTime())) return "Invalid date";
+  return d.toLocaleString("en-US", {
     month: "short",
     day: "numeric",
     year: "numeric",
@@ -251,6 +256,28 @@ export default async function HubSpotReportsPage() {
 
   const now = new Date();
   const monthName = now.toLocaleString("en-US", { month: "long", year: "numeric" });
+
+  const callRows = calls.map((call) => {
+    const { label, cls } = statusBadge(call.properties.hs_call_status);
+    const ownerName = call.properties.hubspot_owner_id
+      ? (owners.get(call.properties.hubspot_owner_id) ?? call.properties.hubspot_owner_id)
+      : "—";
+    return {
+      id: call.id,
+      date: formatTimestamp(call.properties.hs_timestamp),
+      title: call.properties.hs_call_title || "—",
+      user: ownerName,
+      direction: call.properties.hs_call_direction
+        ? call.properties.hs_call_direction.charAt(0) +
+          call.properties.hs_call_direction.slice(1).toLowerCase()
+        : "—",
+      status: label,
+      statusCls: cls,
+      duration: formatDuration(call.properties.hs_call_duration),
+      from: call.properties.hs_call_from_number || "—",
+      to: call.properties.hs_call_to_number || "—",
+    };
+  });
 
   return (
     <div className="flex h-screen bg-zinc-50 dark:bg-black">
@@ -329,94 +356,7 @@ export default async function HubSpotReportsPage() {
                   : "Configure HUBSPOT_ACCESS_TOKEN to see calls."}
               </div>
             ) : (
-              <div className="overflow-x-auto">
-                <table className="w-full text-sm">
-                  <thead>
-                    <tr className="border-b border-zinc-200 dark:border-zinc-800">
-                      <th className="px-6 py-3 text-left font-medium text-zinc-500 dark:text-zinc-400">
-                        Record ID
-                      </th>
-                      <th className="px-6 py-3 text-left font-medium text-zinc-500 dark:text-zinc-400">
-                        Date
-                      </th>
-                      <th className="px-6 py-3 text-left font-medium text-zinc-500 dark:text-zinc-400">
-                        Title
-                      </th>
-                      <th className="px-6 py-3 text-left font-medium text-zinc-500 dark:text-zinc-400">
-                        User
-                      </th>
-                      <th className="px-6 py-3 text-left font-medium text-zinc-500 dark:text-zinc-400">
-                        Direction
-                      </th>
-                      <th className="px-6 py-3 text-left font-medium text-zinc-500 dark:text-zinc-400">
-                        Status
-                      </th>
-                      <th className="px-6 py-3 text-left font-medium text-zinc-500 dark:text-zinc-400">
-                        Duration
-                      </th>
-                      <th className="px-6 py-3 text-left font-medium text-zinc-500 dark:text-zinc-400">
-                        From
-                      </th>
-                      <th className="px-6 py-3 text-left font-medium text-zinc-500 dark:text-zinc-400">
-                        To
-                      </th>
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-zinc-100 dark:divide-zinc-800">
-                    {calls.map((call) => {
-                      const { label, cls } = statusBadge(
-                        call.properties.hs_call_status
-                      );
-                      const ownerName = call.properties.hubspot_owner_id
-                        ? (owners.get(call.properties.hubspot_owner_id) ?? call.properties.hubspot_owner_id)
-                        : "—";
-                      return (
-                        <tr
-                          key={call.id}
-                          className="hover:bg-zinc-50 dark:hover:bg-zinc-800/50"
-                        >
-                          <td className="whitespace-nowrap px-6 py-4 font-mono text-xs text-zinc-500 dark:text-zinc-400">
-                            {call.id}
-                          </td>
-                          <td className="whitespace-nowrap px-6 py-4 text-zinc-700 dark:text-zinc-300">
-                            {formatTimestamp(call.properties.hs_timestamp)}
-                          </td>
-                          <td className="max-w-[200px] truncate px-6 py-4 font-medium text-black dark:text-white">
-                            {call.properties.hs_call_title || "—"}
-                          </td>
-                          <td className="whitespace-nowrap px-6 py-4 text-zinc-700 dark:text-zinc-300">
-                            {ownerName}
-                          </td>
-                          <td className="px-6 py-4 text-zinc-700 dark:text-zinc-300">
-                            {call.properties.hs_call_direction
-                              ? call.properties.hs_call_direction.charAt(0) +
-                                call.properties.hs_call_direction
-                                  .slice(1)
-                                  .toLowerCase()
-                              : "—"}
-                          </td>
-                          <td className="px-6 py-4">
-                            <span
-                              className={`inline-flex rounded-full px-2 py-0.5 text-xs font-medium ${cls}`}
-                            >
-                              {label}
-                            </span>
-                          </td>
-                          <td className="px-6 py-4 text-zinc-700 dark:text-zinc-300">
-                            {formatDuration(call.properties.hs_call_duration)}
-                          </td>
-                          <td className="px-6 py-4 text-zinc-700 dark:text-zinc-300">
-                            {call.properties.hs_call_from_number || "—"}
-                          </td>
-                          <td className="px-6 py-4 text-zinc-700 dark:text-zinc-300">
-                            {call.properties.hs_call_to_number || "—"}
-                          </td>
-                        </tr>
-                      );
-                    })}
-                  </tbody>
-                </table>
-              </div>
+              <CallsTable rows={callRows} />
             )}
           </div>
 
