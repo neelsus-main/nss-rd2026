@@ -29,7 +29,7 @@ export default async function DashboardPage() {
         <div className="mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:px-8">
           <div className="mb-8">
             <h1 className="text-3xl font-bold text-black dark:text-white">
-              Welcome back, {session.user.name || session.user.email}!
+              Welcome back to the app, {session.user.name || session.user.email}!
             </h1>
             <p className="mt-2 text-zinc-600 dark:text-zinc-400">
               Here's what's happening with your CRM today.
