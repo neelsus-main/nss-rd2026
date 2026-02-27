@@ -194,9 +194,11 @@ function formatDuration(ms?: string): string {
 
 function formatTimestamp(timestamp?: string): string {
   if (!timestamp) return "—";
-  const ms = parseInt(timestamp, 10);
-  if (isNaN(ms)) return "Invalid date";
-  const d = new Date(ms);
+  // HubSpot returns hs_timestamp as either ms-as-string or ISO 8601.
+  // parseInt on an ISO string only captures the year (e.g. 2026), yielding epoch.
+  // Use the numeric value only when it's large enough to be a real ms timestamp.
+  const ms = Number(timestamp);
+  const d = !isNaN(ms) && ms > 1e10 ? new Date(ms) : new Date(timestamp);
   if (isNaN(d.getTime())) return "Invalid date";
   return d.toLocaleString("en-US", {
     month: "short",
