@@ -48,6 +48,41 @@ async function fetchPortalId(): Promise<string | null> {
   return data.portalId ? String(data.portalId) : null;
 }
 
+async function fetchContactNames(contactIds: string[]): Promise<Map<string, string>> {
+  const accessToken = process.env.HUBSPOT_ACCESS_TOKEN;
+  if (!accessToken || contactIds.length === 0) return new Map();
+
+  const map = new Map<string, string>();
+  for (let i = 0; i < contactIds.length; i += 100) {
+    const chunk = contactIds.slice(i, i + 100);
+    const response = await fetch(
+      "https://api.hubapi.com/crm/v3/objects/contacts/batch/read",
+      {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${accessToken}`,
+        },
+        body: JSON.stringify({
+          properties: ["firstname", "lastname"],
+          inputs: chunk.map((id) => ({ id })),
+        }),
+        cache: "no-store",
+      }
+    );
+    if (!response.ok) continue;
+    const data = await response.json();
+    for (const result of data.results ?? []) {
+      const name =
+        [result.properties?.firstname, result.properties?.lastname]
+          .filter(Boolean)
+          .join(" ") || result.id;
+      map.set(result.id, name);
+    }
+  }
+  return map;
+}
+
 async function fetchCallContactIds(callIds: string[]): Promise<Map<string, string>> {
   const accessToken = process.env.HUBSPOT_ACCESS_TOKEN;
   if (!accessToken || callIds.length === 0) return new Map();
@@ -237,37 +272,34 @@ function formatDuration(ms?: string): string {
 function formatTimestamp(timestamp?: string): string {
   if (!timestamp) return "—";
   // HubSpot returns hs_timestamp as either ms-as-string or ISO 8601.
-  // parseInt on an ISO string only captures the year (e.g. 2026), yielding epoch.
-  // Use the numeric value only when it's large enough to be a real ms timestamp.
   const ms = Number(timestamp);
   const d = !isNaN(ms) && ms > 1e10 ? new Date(ms) : new Date(timestamp);
-  if (isNaN(d.getTime())) return "Invalid date";
-  return d.toLocaleString("en-US", {
-    month: "short",
-    day: "numeric",
-    year: "numeric",
+  if (isNaN(d.getTime())) return "—";
+
+  const tz = "America/Chicago";
+  const fmt = (date: Date) =>
+    date.toLocaleDateString("en-US", { timeZone: tz, month: "2-digit", day: "2-digit", year: "numeric" });
+
+  const todayStr = fmt(new Date());
+  const callStr = fmt(d);
+
+  const timeStr = d.toLocaleTimeString("en-US", {
     hour: "numeric",
     minute: "2-digit",
     hour12: true,
-    timeZone: "America/Chicago",
+    timeZone: tz,
   });
+
+  if (callStr === todayStr) return `Today at ${timeStr} CST`;
+
+  const yesterday = new Date();
+  yesterday.setDate(yesterday.getDate() - 1);
+  if (callStr === fmt(yesterday)) return `Yesterday at ${timeStr} CST`;
+
+  const dateStr = d.toLocaleDateString("en-US", { timeZone: tz, month: "short", day: "numeric" });
+  return `${dateStr} at ${timeStr} CST`;
 }
 
-function statusBadge(status?: string) {
-  const map: Record<string, string> = {
-    COMPLETED: "bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200",
-    CONNECTED: "bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200",
-    MISSED: "bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200",
-    NO_ANSWER: "bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200",
-    BUSY: "bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200",
-    FAILED: "bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200",
-    CANCELED: "bg-zinc-100 text-zinc-700 dark:bg-zinc-800 dark:text-zinc-300",
-    IN_PROGRESS: "bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200",
-  };
-  const label = status?.replace(/_/g, " ") ?? "—";
-  const cls = map[status ?? ""] ?? "bg-zinc-100 text-zinc-700 dark:bg-zinc-800 dark:text-zinc-300";
-  return { label, cls };
-}
 
 export default async function HubSpotReportsPage() {
   const session = await auth();
@@ -282,6 +314,7 @@ export default async function HubSpotReportsPage() {
   ]);
 
   const callContactIds = await fetchCallContactIds(calls.map((c) => c.id));
+  const contactNames = await fetchContactNames([...callContactIds.values()]);
 
   const completedCalls = calls.filter((c) =>
     ["COMPLETED", "CONNECTED"].includes(c.properties.hs_call_status ?? "")
@@ -306,10 +339,11 @@ export default async function HubSpotReportsPage() {
   const monthName = now.toLocaleString("en-US", { month: "long", year: "numeric" });
 
   const callRows = calls.map((call) => {
-    const { label, cls } = statusBadge(call.properties.hs_call_status);
     const ownerName = call.properties.hubspot_owner_id
       ? (owners.get(call.properties.hubspot_owner_id) ?? call.properties.hubspot_owner_id)
       : "—";
+    const contactId = callContactIds.get(call.id) ?? null;
+    const contactName = contactId ? (contactNames.get(contactId) ?? null) : null;
     return {
       id: call.id,
       date: formatTimestamp(call.properties.hs_timestamp),
@@ -319,13 +353,12 @@ export default async function HubSpotReportsPage() {
         ? call.properties.hs_call_direction.charAt(0) +
           call.properties.hs_call_direction.slice(1).toLowerCase()
         : "—",
-      status: label,
-      statusCls: cls,
+      status: call.properties.hs_call_status?.replace(/_/g, " ") ?? "—",
       duration: formatDuration(call.properties.hs_call_duration),
-      from: call.properties.hs_call_from_number || "—",
-      to: call.properties.hs_call_to_number || "—",
-      hubspotUrl: portalId && callContactIds.get(call.id)
-        ? `https://app.hubspot.com/contacts/${portalId}/contact/${callContactIds.get(call.id)}`
+      body: call.properties.hs_call_body || "",
+      contactName,
+      hubspotUrl: portalId && contactId
+        ? `https://app.hubspot.com/contacts/${portalId}/contact/${contactId}`
         : null,
     };
   });
