@@ -218,11 +218,6 @@ async function fetchHubSpotOutboundEmailsThisMonth(): Promise<HubSpotEmail[]> {
               operator: "GTE",
               value: startOfMonth.getTime().toString(),
             },
-            {
-              propertyName: "hs_email_direction",
-              operator: "IN",
-              values: ["EMAIL", "FORWARDED_EMAIL"],
-            },
           ],
         },
       ],
@@ -326,9 +321,14 @@ export default async function HubSpotReportsPage() {
     (c) => c.properties.hs_call_direction === "OUTBOUND"
   );
 
+  // Filter to outbound only client-side (inbound direction = "INCOMING_EMAIL")
+  const outboundOnlyEmails = outboundEmails.filter(
+    (e) => e.properties.hs_email_direction !== "INCOMING_EMAIL"
+  );
+
   // Group outbound emails by owner
   const emailsByOwner = new Map<string, number>();
-  for (const email of outboundEmails) {
+  for (const email of outboundOnlyEmails) {
     const ownerId = email.properties.hubspot_owner_id ?? "Unassigned";
     const ownerName = ownerId !== "Unassigned" ? (owners.get(ownerId) ?? ownerId) : "Unassigned";
     emailsByOwner.set(ownerName, (emailsByOwner.get(ownerName) ?? 0) + 1);
@@ -451,11 +451,11 @@ export default async function HubSpotReportsPage() {
                 Outbound Emails by Sales Exec — {monthName}
               </h2>
               <p className="mt-1 text-sm text-zinc-500 dark:text-zinc-400">
-                {outboundEmails.length} outbound email{outboundEmails.length !== 1 ? "s" : ""} sent this month
+                {outboundOnlyEmails.length} outbound email{outboundOnlyEmails.length !== 1 ? "s" : ""} sent this month
               </p>
             </div>
 
-            {outboundEmails.length === 0 ? (
+            {outboundOnlyEmails.length === 0 ? (
               <div className="px-6 py-12 text-center text-zinc-500 dark:text-zinc-400">
                 {hasToken
                   ? "No outbound emails found for this month."
@@ -495,11 +495,11 @@ export default async function HubSpotReportsPage() {
                               <div
                                 className="h-full rounded-full bg-blue-500"
                                 style={{
-                                  width: `${Math.round((count / outboundEmails.length) * 100)}%`,
+                                  width: `${Math.round((count / outboundOnlyEmails.length) * 100)}%`,
                                 }}
                               />
                             </div>
-                            <span>{Math.round((count / outboundEmails.length) * 100)}%</span>
+                            <span>{Math.round((count / outboundOnlyEmails.length) * 100)}%</span>
                           </div>
                         </td>
                       </tr>
