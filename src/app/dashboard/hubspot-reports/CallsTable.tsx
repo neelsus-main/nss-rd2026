@@ -4,7 +4,7 @@ import { useState } from "react";
 
 interface CallRow {
   id: string;
-  date: string;
+  timestamp: number;
   title: string;
   user: string;
   direction: string;
@@ -16,6 +16,18 @@ interface CallRow {
 }
 
 const PAGE_SIZES = [25, 50, 100];
+
+function formatTimestamp(ms: number): string {
+  if (!ms) return "—";
+  return new Date(ms).toLocaleString("en-US", {
+    month: "short",
+    day: "numeric",
+    year: "numeric",
+    hour: "numeric",
+    minute: "2-digit",
+    hour12: true,
+  });
+}
 
 export default function CallsTable({ rows }: { rows: CallRow[] }) {
   const [page, setPage] = useState(1);
@@ -55,7 +67,7 @@ export default function CallsTable({ rows }: { rows: CallRow[] }) {
                   {row.id}
                 </td>
                 <td className="whitespace-nowrap px-6 py-4 text-zinc-700 dark:text-zinc-300">
-                  {row.date}
+                  {formatTimestamp(row.timestamp)}
                 </td>
                 <td className="max-w-[200px] truncate px-6 py-4 font-medium text-black dark:text-white">
                   {row.title}
@@ -99,7 +111,9 @@ export default function CallsTable({ rows }: { rows: CallRow[] }) {
 
         <div className="flex items-center gap-3 text-sm text-zinc-500 dark:text-zinc-400">
           <span>
-            {start + 1}–{Math.min(start + pageSize, rows.length)} of {rows.length}
+            {rows.length > 0
+              ? `${start + 1}–${Math.min(start + pageSize, rows.length)} of ${rows.length}`
+              : "No results"}
           </span>
           <button
             onClick={() => setPage((p) => Math.max(1, p - 1))}
